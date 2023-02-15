@@ -1,61 +1,60 @@
+import re
 
-def calculate(s):
-        arr = []
-        for c in s:
-            arr.append(c)
-        return helper(arr)
+def is_number(str):
+    try:
+        int(str)
+        return True
+    except ValueError:
+        return False
 
-def helper(s):
-        if len(s) == 0:
-            return 0
-        stack = []
-        sign = '+'
-        num = 0
-        while len(s) > 0:
-            c = s.pop(0)
-            if c.isdigit():
-                num = num*10+int(c)
-            if c == '(':
-                num = helper(s)
-            if len(s) == 0 or (c == '+' or c == '-' or c == '*' or c == '/' or c == ')'):
-                if sign == '+':
-                    stack.append(num)
-                elif sign == '-':
-                    stack.append(-num)
-                elif sign == '*':
-                    stack[-1] = stack[-1]*num
-                elif sign == '/':
-                    stack[-1] = int(stack[-1]/float(num))
-                sign = c
-                num = 0
-                if sign == ')':
-                    break
-        return sum(stack)
 
-def check(string):
-    brackets_open = ('(', '[', '{')
-    brackets_closed = (')', ']', '}')
-    stack = []
-    for i in string:
-        if i in brackets_open:
-            stack.append(i)
-        if i in brackets_closed:    
-            if len(stack) == 0:
-                return False
-            index = brackets_closed.index(i)
-            open_bracket = brackets_open[index]
-            if stack[-1] == open_bracket:
-                stack = stack[:-1]  
-            else: return False  
-    return (not stack)
+def is_name(str):
+    return re.match("\w+", str)
 
-str=input("Введите строку ")
-if check(str) :
-    if str[len(str)-1] == "=":
-        try: print(calculate(str[:-1]))
-        except: print("Не пройдена проверка на дурака")
 
-    else: 
-        print("В выражении отсутствует знак =")
-else : 
-    print("Проблема со скобками")
+def peek(stack):
+    return stack[-1] if stack else None
+
+
+def apply_operator(operators, values):
+    operator = operators.pop()
+    right = values.pop()
+    left = values.pop()
+    values.append(eval("{0}{1}{2}".format(left, operator, right)))
+
+
+def greater_precedence(op1, op2):
+    precedences = {'+': 0, '-': 0, '*': 1, '/': 1}
+    return precedences[op1] > precedences[op2]
+
+
+def evaluate(expression):
+    if "=" in expression:
+        expression.replace("=", "")
+    tokens = re.findall("[+/*()-]|\d+", expression)
+    values = []
+    operators = []
+    for token in tokens:
+        if is_number(token):
+            values.append(int(token))
+        elif token == '(':
+            operators.append(token)
+        elif token == ')':
+            top = peek(operators)
+            while top is not None and top != '(':
+                apply_operator(operators, values)
+                top = peek(operators)
+            operators.pop()
+        else:
+            top = peek(operators)
+            while top is not None and top not in "()" and greater_precedence(top, token):
+                apply_operator(operators, values)
+                top = peek(operators)
+            operators.append(token)
+    while peek(operators) is not None:
+        apply_operator(operators, values)
+
+    return values[0]
+
+expression = '2+(3 * 6 + (5 - 3))+(8 - 2)='
+print(format(evaluate(expression)))
